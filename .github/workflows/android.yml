@@ -14,6 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install 32-bit libraries for legacy AAPT
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y lib32z1 lib32stdc++6 libc6:i386 libstdc++6:i386 zlib1g:i386 || true
+
       - name: Set up JDK 17 for Android SDK Manager
         uses: actions/setup-java@v4
         with:
@@ -35,6 +41,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug APK
+        env:
+          SLAVE_AAPT_TIMEOUT: 60
         run: ./gradlew assembleDebug
 
       - name: Prepare APK Artifact
