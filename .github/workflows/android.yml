@@ -1,0 +1,46 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-23 build-tools;23.0.3'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Prepare APK Artifact
+        run: |
+          if [ -f app/build/outputs/apk/app-debug.apk ]; then
+            cp app/build/outputs/apk/app-debug.apk 6-DOF-Kalman-Tracker.apk
+          else
+            find app/build/outputs/apk/ -name "*.apk" | head -n 1 | xargs -I {} cp {} 6-DOF-Kalman-Tracker.apk
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 6-DOF-Kalman-Tracker.apk
+          path: 6-DOF-Kalman-Tracker.apk
