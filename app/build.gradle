@@ -7,7 +7,7 @@ android {
     defaultConfig {
         applicationId "slcot.mit.edu.a6_dofkalmantracker"
         minSdkVersion 21
-        targetSdkVersion 23
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
     }
@@ -17,13 +17,14 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    aaptOptions {
+        cruncherEnabled = false
+    }
 }
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.4.0'
-    compile 'gov.nist.math:jama:1.0.3'
     compile 'com.github.nkzawa:socket.io-client:0.3.0'
-    compile files('libs/Jama-1.0.3.jar')
 }
