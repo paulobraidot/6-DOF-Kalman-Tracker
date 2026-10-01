@@ -29,7 +29,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platforms;android-23 build-tools;23.0.3'
+          packages: 'platforms;android-23 build-tools;23.0.3 build-tools;34.0.0'
 
       - name: Set up JDK 8 for Gradle
         uses: actions/setup-java@v4
@@ -40,18 +40,37 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
+      - name: Build Unaligned APK
         env:
           SLAVE_AAPT_TIMEOUT: 60
         run: ./gradlew assembleDebug
 
-      - name: Prepare APK Artifact
+      - name: Zipalign and Sign APK with V2/V3 Signature Schemes
         run: |
-          if [ -f app/build/outputs/apk/app-debug.apk ]; then
-            cp app/build/outputs/apk/app-debug.apk 6-DOF-Kalman-Tracker.apk
-          else
-            find app/build/outputs/apk/ -name "*.apk" | head -n 1 | xargs -I {} cp {} 6-DOF-Kalman-Tracker.apk
+          INPUT_APK=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
+          echo "Found APK at $INPUT_APK"
+
+          # Find zipalign and apksigner from build-tools 34.0.0
+          ZIPALIGN_TOOL="/usr/local/lib/android/sdk/build-tools/34.0.0/zipalign"
+          APKSIGNER_TOOL="/usr/local/lib/android/sdk/build-tools/34.0.0/apksigner"
+          if [ ! -f "$ZIPALIGN_TOOL" ]; then
+            ZIPALIGN_TOOL=$(which zipalign || find /usr/local/lib/android/sdk/build-tools/ -name zipalign | head -n 1)
           fi
+          if [ ! -f "$APKSIGNER_TOOL" ]; then
+            APKSIGNER_TOOL=$(which apksigner || find /usr/local/lib/android/sdk/build-tools/ -name apksigner | head -n 1)
+          fi
+
+          # Create debug keystore
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+          # Zipalign
+          "$ZIPALIGN_TOOL" -v -p 4 "$INPUT_APK" aligned.apk
+
+          # Sign with apksigner (supports V1, V2, V3)
+          "$APKSIGNER_TOOL" sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey --out 6-DOF-Kalman-Tracker.apk aligned.apk
+
+          # Verify signature
+          "$APKSIGNER_TOOL" verify --verbose 6-DOF-Kalman-Tracker.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
